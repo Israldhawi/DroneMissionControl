@@ -129,3 +129,96 @@ export function findPilotForLogin(
     passwordHash: row.password_hash,
   };
 }
+
+export function findPilotPasswordHash(
+  id: string,
+): string | null {
+  const row = db
+    .prepare(
+      `
+      SELECT password_hash
+      FROM pilots
+      WHERE id = ?
+      `,
+    )
+    .get(id) as { password_hash: string } | undefined;
+
+  return row ? row.password_hash : null;
+}
+
+export function createPilot(
+  pilot: PilotWithPassword,
+): Pilot {
+  db.prepare(
+    `
+    INSERT INTO pilots (
+      id,
+      name,
+      email,
+      license_number,
+      role,
+      is_active,
+      password_hash
+    )
+    VALUES (
+      @id,
+      @name,
+      @email,
+      @licenseNumber,
+      @role,
+      @isActive,
+      @passwordHash
+    )
+    `,
+  ).run({
+    id: pilot.id,
+    name: pilot.name,
+    email: pilot.email,
+    licenseNumber: pilot.licenseNumber,
+    role: pilot.role,
+    isActive: pilot.isActive ? 1 : 0,
+    passwordHash: pilot.passwordHash,
+  });
+
+  const createdPilot = findPilotById(pilot.id);
+
+  if (!createdPilot) {
+    throw new Error("Failed to create pilot");
+  }
+
+  return createdPilot;
+}
+
+export function updatePilot(
+  pilot: PilotWithPassword,
+): Pilot {
+  db.prepare(
+    `
+    UPDATE pilots
+    SET
+      name = @name,
+      email = @email,
+      license_number = @licenseNumber,
+      role = @role,
+      is_active = @isActive,
+      password_hash = @passwordHash
+    WHERE id = @id
+    `,
+  ).run({
+    id: pilot.id,
+    name: pilot.name,
+    email: pilot.email,
+    licenseNumber: pilot.licenseNumber,
+    role: pilot.role,
+    isActive: pilot.isActive ? 1 : 0,
+    passwordHash: pilot.passwordHash,
+  });
+
+  const updatedPilot = findPilotById(pilot.id);
+
+  if (!updatedPilot) {
+    throw new Error("Failed to update pilot");
+  }
+
+  return updatedPilot;
+}

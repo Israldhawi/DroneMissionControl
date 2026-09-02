@@ -198,3 +198,110 @@ export function findMissions(
     total: countRow.total,
   };
 }
+
+export function createMission(mission: Mission): Mission {
+  db.prepare(
+    `
+    INSERT INTO missions (
+      id,
+      title,
+      pilot_id,
+      location,
+      scheduled_at,
+      duration_minutes,
+      battery_start,
+      battery_end,
+      weather,
+      status,
+      notes
+    )
+    VALUES (
+      @id,
+      @title,
+      @pilotId,
+      @location,
+      @scheduledAt,
+      @durationMinutes,
+      @batteryStart,
+      @batteryEnd,
+      @weather,
+      @status,
+      @notes
+    )
+    `,
+  ).run({
+    id: mission.id,
+    title: mission.title,
+    pilotId: mission.pilotId,
+    location: mission.location,
+    scheduledAt: mission.scheduledAt,
+    durationMinutes: mission.durationMinutes,
+    batteryStart: mission.batteryStart,
+    batteryEnd: mission.batteryEnd,
+    weather: mission.weather,
+    status: mission.status,
+    notes: mission.notes,
+  });
+
+  const createdMission = findMissionById(mission.id);
+
+  if (!createdMission) {
+    throw new Error("Failed to create mission");
+  }
+
+  return createdMission;
+}
+
+export function updateMission(mission: Mission): Mission {
+  db.prepare(
+    `
+    UPDATE missions
+    SET
+      title = @title,
+      pilot_id = @pilotId,
+      location = @location,
+      scheduled_at = @scheduledAt,
+      duration_minutes = @durationMinutes,
+      battery_start = @batteryStart,
+      battery_end = @batteryEnd,
+      weather = @weather,
+      status = @status,
+      notes = @notes,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = @id
+    `,
+  ).run({
+    id: mission.id,
+    title: mission.title,
+    pilotId: mission.pilotId,
+    location: mission.location,
+    scheduledAt: mission.scheduledAt,
+    durationMinutes: mission.durationMinutes,
+    batteryStart: mission.batteryStart,
+    batteryEnd: mission.batteryEnd,
+    weather: mission.weather,
+    status: mission.status,
+    notes: mission.notes,
+  });
+
+  const updatedMission = findMissionById(mission.id);
+
+  if (!updatedMission) {
+    throw new Error("Failed to update mission");
+  }
+
+  return updatedMission;
+}
+
+export function deleteMission(id: string): boolean {
+  const result = db
+    .prepare(
+      `
+      DELETE FROM missions
+      WHERE id = ?
+      `,
+    )
+    .run(id);
+
+  return result.changes > 0;
+}
