@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -86,6 +86,22 @@ function MissionDetails() {
       return;
     }
 
+    const batteryEndValue = Number(batteryEnd);
+
+    if (
+      !Number.isInteger(batteryEndValue) ||
+      batteryEndValue < 0 ||
+      batteryEndValue > 100
+    ) {
+      setError("Battery end must be a whole number between 0 and 100.");
+      return;
+    }
+
+    if (batteryEndValue >= mission!.batteryStart) {
+      setError("Battery end must be lower than battery start.");
+      return;
+    }
+
     setError("");
     setActionLoading(true);
 
@@ -94,10 +110,11 @@ function MissionDetails() {
         id,
         "completed",
         mission?.notes ?? null,
-        Number(batteryEnd),
+        batteryEndValue,
       );
 
       setMission(updated);
+      setBatteryEnd(String(updated.batteryEnd ?? ""));
     } catch (err) {
       setError(
         err instanceof Error
@@ -144,7 +161,7 @@ function MissionDetails() {
 
   if (loading) {
     return (
-      <div className="rounded-lg border bg-white p-6">
+      <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
         Loading mission...
       </div>
     );
@@ -153,14 +170,17 @@ function MissionDetails() {
   if (error && !mission) {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+        >
           {error}
         </div>
 
         <button
           type="button"
           onClick={() => navigate("/missions")}
-          className="rounded-lg bg-gray-900 px-4 py-2 font-medium text-white"
+          className="rounded-lg bg-gray-900 px-4 py-2 font-medium text-white hover:bg-gray-700"
         >
           Back to Missions
         </button>
@@ -170,7 +190,7 @@ function MissionDetails() {
 
   if (!mission) {
     return (
-      <div className="rounded-lg border bg-white p-6">
+      <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
         Mission not found.
       </div>
     );
@@ -183,22 +203,49 @@ function MissionDetails() {
       (mission.status === "planned" ||
         mission.status === "in_progress"));
 
+  const batteryUsed =
+    mission.batteryEnd !== null
+      ? mission.batteryStart - mission.batteryEnd
+      : null;
+
+  const timeline = [
+    {
+      label: "Mission created",
+      date: mission.createdAt,
+    },
+    {
+      label: "Scheduled",
+      date: mission.scheduledAt,
+    },
+    {
+      label:
+        mission.status === "planned"
+          ? "Current status: Planned"
+          : mission.status === "in_progress"
+            ? "Current status: In Progress"
+            : mission.status === "completed"
+              ? "Current status: Completed"
+              : "Current status: Aborted",
+      date: mission.updatedAt,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <Link
             to="/missions"
-            className="text-sm text-gray-500 hover:text-gray-900"
+            className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
           >
             ? Back to Missions
           </Link>
 
-          <h2 className="mt-2 text-2xl font-bold text-gray-900">
+          <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
             {mission.title}
           </h2>
 
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Mission ID: {mission.id}
           </p>
         </div>
@@ -206,7 +253,7 @@ function MissionDetails() {
         {canEdit && (
           <Link
             to={`/missions/${mission.id}/edit`}
-            className="rounded-lg bg-gray-900 px-4 py-2 font-medium text-white hover:bg-gray-700"
+            className="rounded-lg bg-gray-900 px-4 py-2 font-medium text-white hover:bg-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
           >
             Edit Mission
           </Link>
@@ -214,111 +261,160 @@ function MissionDetails() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+        >
           {error}
         </div>
       )}
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-lg border bg-white p-6">
-          <h3 className="mb-4 text-lg font-semibold text-gray-900">
+        <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
             Mission Information
           </h3>
 
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Location
               </p>
-              <p className="font-medium text-gray-900">
+              <p className="font-medium text-gray-900 dark:text-white">
                 {mission.location}
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Scheduled At
               </p>
-              <p className="font-medium text-gray-900">
-                {new Date(
-                  mission.scheduledAt,
-                ).toLocaleString()}
+              <p className="font-medium text-gray-900 dark:text-white">
+                {new Date(mission.scheduledAt).toLocaleString()}
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Duration
               </p>
-              <p className="font-medium text-gray-900">
+              <p className="font-medium text-gray-900 dark:text-white">
                 {mission.durationMinutes} minutes
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Pilot ID
               </p>
-              <p className="font-medium text-gray-900">
+              <p className="font-medium text-gray-900 dark:text-white">
                 {mission.pilotId}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-lg border bg-white p-6">
-          <h3 className="mb-4 text-lg font-semibold text-gray-900">
+        <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
             Flight Information
           </h3>
 
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Status
               </p>
 
-              <span className="inline-block rounded-full bg-gray-100 px-3 py-1 text-sm font-medium capitalize text-gray-900">
+              <span className="inline-block rounded-full bg-gray-100 px-3 py-1 text-sm font-medium capitalize text-gray-900 dark:bg-gray-900 dark:text-white">
                 {mission.status.replace("_", " ")}
               </span>
             </div>
 
             <div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Weather
               </p>
-              <p className="font-medium capitalize text-gray-900">
+              <p className="font-medium capitalize text-gray-900 dark:text-white">
                 {mission.weather}
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Battery Start
               </p>
-              <p className="font-medium text-gray-900">
+              <p className="font-medium text-gray-900 dark:text-white">
                 {mission.batteryStart}%
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Battery End
               </p>
-              <p className="font-medium text-gray-900">
+              <p className="font-medium text-gray-900 dark:text-white">
                 {mission.batteryEnd !== null
                   ? `${mission.batteryEnd}%`
                   : "Not recorded"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Battery Used
+              </p>
+              <p className="font-medium text-gray-900 dark:text-white">
+                {batteryUsed !== null
+                  ? `${batteryUsed}%`
+                  : "Not available until mission completion"}
               </p>
             </div>
           </div>
         </div>
       </div>
 
+      <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+        <h3 className="mb-5 text-lg font-semibold text-gray-900 dark:text-white">
+          Mission Timeline
+        </h3>
+
+        <div className="space-y-5">
+          {timeline.map((event, index) => (
+            <div
+              key={`${event.label}-${event.date}`}
+              className="flex gap-4"
+            >
+              <div className="flex flex-col items-center">
+                <div className="h-3 w-3 rounded-full bg-blue-600" />
+
+                {index < timeline.length - 1 && (
+                  <div className="mt-1 h-full min-h-8 w-px bg-gray-300 dark:bg-gray-600" />
+                )}
+              </div>
+
+              <div className="pb-2">
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {event.label}
+                </p>
+
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {new Date(event.date).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-5 text-xs text-gray-500 dark:text-gray-400">
+          Timeline events use the mission timestamps provided by the API.
+        </p>
+      </div>
+
       {canEdit &&
         mission.status !== "completed" &&
         mission.status !== "aborted" && (
-          <div className="rounded-lg border bg-white p-6">
-            <h3 className="mb-4 text-lg font-semibold text-gray-900">
+          <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
               Mission Actions
             </h3>
 
@@ -328,7 +424,7 @@ function MissionDetails() {
                   type="button"
                   onClick={handleStart}
                   disabled={actionLoading}
-                  className="rounded-lg bg-gray-900 px-5 py-2 font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+                  className="rounded-lg bg-gray-900 px-5 py-2 font-medium text-white hover:bg-gray-700 disabled:opacity-50 dark:bg-gray-950"
                 >
                   {actionLoading
                     ? "Updating..."
@@ -341,7 +437,7 @@ function MissionDetails() {
                   <div>
                     <label
                       htmlFor="batteryEnd"
-                      className="mb-1 block text-sm font-medium text-gray-700"
+                      className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
                       Battery End (%)
                     </label>
@@ -355,7 +451,7 @@ function MissionDetails() {
                       onChange={(event) =>
                         setBatteryEnd(event.target.value)
                       }
-                      className="w-full max-w-xs rounded-lg border border-gray-300 px-4 py-2"
+                      className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                     />
                   </div>
 
@@ -363,7 +459,7 @@ function MissionDetails() {
                     type="button"
                     onClick={handleComplete}
                     disabled={actionLoading}
-                    className="rounded-lg bg-gray-900 px-5 py-2 font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+                    className="rounded-lg bg-gray-900 px-5 py-2 font-medium text-white hover:bg-gray-700 disabled:opacity-50 dark:bg-gray-950"
                   >
                     {actionLoading
                       ? "Updating..."
@@ -372,10 +468,10 @@ function MissionDetails() {
                 </div>
               )}
 
-              <div className="border-t pt-5">
+              <div className="border-t border-gray-300 pt-5 dark:border-gray-600">
                 <label
                   htmlFor="abortReason"
-                  className="mb-1 block text-sm font-medium text-gray-700"
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                 >
                   Abort Reason
                 </label>
@@ -389,14 +485,14 @@ function MissionDetails() {
                   maxLength={500}
                   rows={3}
                   placeholder="Enter the reason for aborting this mission..."
-                  className="mb-3 w-full rounded-lg border border-gray-300 px-4 py-2"
+                  className="mb-3 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                 />
 
                 <button
                   type="button"
                   onClick={handleAbort}
                   disabled={actionLoading}
-                  className="rounded-lg border border-red-300 px-5 py-2 font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  className="rounded-lg border border-red-300 px-5 py-2 font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-950/30"
                 >
                   {actionLoading
                     ? "Updating..."
@@ -407,12 +503,12 @@ function MissionDetails() {
           </div>
         )}
 
-      <div className="rounded-lg border bg-white p-6">
-        <h3 className="mb-3 text-lg font-semibold text-gray-900">
+      <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+        <h3 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">
           Notes
         </h3>
 
-        <p className="whitespace-pre-wrap text-gray-700">
+        <p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
           {mission.notes || "No notes available."}
         </p>
       </div>

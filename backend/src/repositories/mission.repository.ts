@@ -88,9 +88,9 @@ function buildWhereClause(filters: MissionFilters): {
   }
 
   if (filters.dateTo) {
-    conditions.push("scheduled_at <= @dateTo");
-    parameters.dateTo = filters.dateTo;
-  }
+  conditions.push("scheduled_at <= @dateTo");
+  parameters.dateTo = `${filters.dateTo}T23:59:59.999`;
+}
 
   return {
     where: conditions.length > 0
