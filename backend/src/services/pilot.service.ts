@@ -1,4 +1,6 @@
-import bcrypt from "bcryptjs";
+﻿import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
+
 import {
   createPilot,
   findPilotByEmail,
@@ -7,12 +9,15 @@ import {
   findPilotPasswordHash,
   updatePilot,
 } from "../repositories/pilot.repository";
+
 import type {
   Pilot,
   PilotWithPassword,
   UserRole,
 } from "../types/pilot";
+
 import { AppError } from "../utils/errors";
+
 import {
   isValidEmail,
   isValidLicenseNumber,
@@ -144,7 +149,8 @@ export function createNewPilot(
 
   if (
     existingPilots.some(
-      (pilot) => pilot.licenseNumber === licenseNumber,
+      (pilot) =>
+        pilot.licenseNumber === licenseNumber,
     )
   ) {
     throw new AppError(
@@ -158,14 +164,20 @@ export function createNewPilot(
     );
   }
 
+  const passwordHash = bcrypt.hashSync(
+    input.password,
+    10,
+  );
+
   const pilot: PilotWithPassword = {
-    id: crypto.randomUUID(),
+    id: randomUUID(),
     name: input.name.trim(),
     email,
     licenseNumber,
     role: input.role,
     isActive: input.isActive,
-    passwordHash: bcrypt.hashSync(input.password, 10),
+    missionCount: 0,
+    passwordHash,
   };
 
   return createPilot(pilot);
@@ -261,6 +273,7 @@ export function editPilot(
       input.isActive !== undefined
         ? input.isActive
         : existing.isActive,
+    missionCount: existing.missionCount,
     passwordHash,
   };
 

@@ -7,6 +7,7 @@ export interface Pilot {
   licenseNumber: string;
   role: UserRole;
   isActive: boolean;
+  missionCount: number;
 }
 
 export interface PilotWithPassword extends Pilot {

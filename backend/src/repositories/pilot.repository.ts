@@ -1,4 +1,4 @@
-import db from "../db/database";
+﻿import db from "../db/database";
 import type {
   Pilot,
   PilotWithPassword,
@@ -12,6 +12,7 @@ interface PilotRow {
   license_number: string;
   role: UserRole;
   is_active: number;
+  mission_count: number;
 }
 
 function mapPilot(row: PilotRow): Pilot {
@@ -22,22 +23,27 @@ function mapPilot(row: PilotRow): Pilot {
     licenseNumber: row.license_number,
     role: row.role,
     isActive: row.is_active === 1,
+    missionCount: row.mission_count,
   };
 }
-
 export function findPilotById(id: string): Pilot | null {
   const row = db
     .prepare(
       `
       SELECT
-        id,
-        name,
-        email,
-        license_number,
-        role,
-        is_active
-      FROM pilots
-      WHERE id = ?
+  id,
+  name,
+  email,
+  license_number,
+  role,
+  is_active,
+  (
+    SELECT COUNT(*)
+    FROM missions
+    WHERE missions.pilot_id = pilots.id
+  ) AS mission_count
+FROM pilots
+WHERE id = ?
       `,
     )
     .get(id) as PilotRow | undefined;
@@ -50,14 +56,19 @@ export function findPilotByEmail(email: string): Pilot | null {
     .prepare(
       `
       SELECT
-        id,
-        name,
-        email,
-        license_number,
-        role,
-        is_active
-      FROM pilots
-      WHERE email = ?
+  id,
+  name,
+  email,
+  license_number,
+  role,
+  is_active,
+  (
+    SELECT COUNT(*)
+    FROM missions
+    WHERE missions.pilot_id = pilots.id
+  ) AS mission_count
+FROM pilots
+WHERE email = ?
       `,
     )
     .get(email) as PilotRow | undefined;
@@ -70,14 +81,19 @@ export function findAllPilots(): Pilot[] {
     .prepare(
       `
       SELECT
-        id,
-        name,
-        email,
-        license_number,
-        role,
-        is_active
-      FROM pilots
-      ORDER BY name ASC
+  id,
+  name,
+  email,
+  license_number,
+  role,
+  is_active,
+  (
+    SELECT COUNT(*)
+    FROM missions
+    WHERE missions.pilot_id = pilots.id
+  ) AS mission_count
+FROM pilots
+ORDER BY name ASC
       `,
     )
     .all() as PilotRow[];
@@ -126,6 +142,7 @@ export function findPilotForLogin(
     licenseNumber: row.license_number,
     role: row.role,
     isActive: row.is_active === 1,
+    missionCount: 0,
     passwordHash: row.password_hash,
   };
 }
@@ -222,3 +239,4 @@ export function updatePilot(
 
   return updatedPilot;
 }
+

@@ -1,6 +1,8 @@
-import type {
+﻿import type {
+  CreatePilotRequest,
   Pilot,
   PilotListResult,
+  UpdatePilotRequest,
 } from "../types/pilot";
 
 const API_BASE_URL = "http://localhost:3000";
@@ -15,6 +17,51 @@ function getToken(): string {
   return token;
 }
 
+interface ApiErrorResponse {
+  error?: {
+    code?: string;
+    message?: string;
+    fields?: Record<string, string>;
+  };
+  message?: string;
+}
+
+export class PilotApiError extends Error {
+  fields?: Record<string, string>;
+
+  constructor(
+    message: string,
+    fields?: Record<string, string>,
+  ) {
+    super(message);
+    this.name = "PilotApiError";
+    this.fields = fields;
+  }
+}
+
+async function handleResponse<T>(
+  response: Response,
+): Promise<T> {
+  const text = await response.text();
+
+  const data: ApiErrorResponse | T | null = text
+    ? JSON.parse(text)
+    : null;
+
+  if (!response.ok) {
+    const errorData = data as ApiErrorResponse | null;
+
+    throw new PilotApiError(
+      errorData?.error?.message ||
+        errorData?.message ||
+        "Request failed",
+      errorData?.error?.fields,
+    );
+  }
+
+  return data as T;
+}
+
 export async function getPilots(): Promise<Pilot[]> {
   const response = await fetch(
     `${API_BASE_URL}/pilots`,
@@ -25,19 +72,45 @@ export async function getPilots(): Promise<Pilot[]> {
     },
   );
 
-  const text = await response.text();
+  const data =
+    await handleResponse<PilotListResult>(response);
 
-  const data = text
-    ? JSON.parse(text)
-    : null;
+  return data.data;
+}
 
-  if (!response.ok) {
-    throw new Error(
-      data?.error?.message ||
-      data?.message ||
-      "Failed to load pilots",
-    );
-  }
+export async function createPilot(
+  pilot: CreatePilotRequest,
+): Promise<Pilot> {
+  const response = await fetch(
+    `${API_BASE_URL}/pilots`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify(pilot),
+    },
+  );
 
-  return (data as PilotListResult).data;
+  return handleResponse<Pilot>(response);
+}
+
+export async function updatePilot(
+  id: string,
+  pilot: UpdatePilotRequest,
+): Promise<Pilot> {
+  const response = await fetch(
+    `${API_BASE_URL}/pilots/${id}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify(pilot),
+    },
+  );
+
+  return handleResponse<Pilot>(response);
 }

@@ -18,20 +18,43 @@ function getToken(): string {
   return token;
 }
 
+interface ApiErrorResponse {
+  error?: {
+    code?: string;
+    message?: string;
+    fields?: Record<string, string>;
+  };
+  message?: string;
+}
+
+export class ApiError extends Error {
+  fields?: Record<string, string>;
+
+  constructor(
+    message: string,
+    fields?: Record<string, string>,
+  ) {
+    super(message);
+    this.name = "ApiError";
+    this.fields = fields;
+  }
+}
+
 async function handleResponse<T>(
   response: Response,
 ): Promise<T> {
   const text = await response.text();
 
-  const data = text
-    ? JSON.parse(text)
+  const data: ApiErrorResponse | null = text
+    ? (JSON.parse(text) as ApiErrorResponse)
     : null;
 
   if (!response.ok) {
-    throw new Error(
+    throw new ApiError(
       data?.error?.message ||
-      data?.message ||
-      "Request failed",
+        data?.message ||
+        "Request failed",
+      data?.error?.fields,
     );
   }
 
