@@ -1,11 +1,13 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   createPilot,
   getPilots,
-  PilotApiError,
   updatePilot,
 } from "../services/pilot.service";
+
+import { ApiError } from "../services/api";
+
 
 import { useAuth } from "../context/AuthContext";
 
@@ -238,7 +240,7 @@ function Pilots() {
 
       closeForm();
     } catch (err) {
-      if (err instanceof PilotApiError) {
+      if (err instanceof ApiError) {
         setFormError(err.message);
 
         if (err.fields) {
@@ -687,3 +689,4 @@ function Pilots() {
 }
 
 export default Pilots;
+

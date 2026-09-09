@@ -1,12 +1,13 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import {
-  ApiError,
   getMission,
   updateMission,
 } from "../services/mission.service";
+
+import { ApiError } from "../services/api";
 
 import { getPilots } from "../services/pilot.service";
 
@@ -324,7 +325,7 @@ function MissionEdit() {
           to={`/missions/${mission.id}`}
           className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
         >
-          ← Back to Mission
+          ? Back to Mission
         </Link>
 
         <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
@@ -407,7 +408,7 @@ function MissionEdit() {
                   key={pilot.id}
                   value={pilot.id}
                 >
-                  {pilot.name} — {pilot.licenseNumber}
+                  {pilot.name} ? {pilot.licenseNumber}
                 </option>
               ))}
             </select>

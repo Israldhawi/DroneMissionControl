@@ -7,4 +7,3 @@ const schema = fs.readFileSync(schemaPath, "utf-8");
 
 db.exec(schema);
 
-console.log("Database initialized successfully.");
