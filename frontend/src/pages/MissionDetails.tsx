@@ -2,6 +2,7 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import {
+  deleteMission,
   getMission,
   updateMissionStatus,
 } from "../services/mission.service";
@@ -23,6 +24,10 @@ function MissionDetails() {
   const [batteryEnd, setBatteryEnd] = useState("");
   const [abortReason, setAbortReason] = useState("");
 
+  const [showDeleteConfirm, setShowDeleteConfirm] =
+    useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   async function loadMission() {
     if (!id) {
       setError("Mission ID is missing.");
@@ -32,12 +37,15 @@ function MissionDetails() {
 
     try {
       const data = await getMission(id);
+
       setMission(data);
+
       setBatteryEnd(
         data.batteryEnd !== null
           ? String(data.batteryEnd)
           : "",
       );
+
       setAbortReason(data.notes ?? "");
     } catch (err) {
       setError(
@@ -78,11 +86,37 @@ function MissionDetails() {
     }
   }
 
+  async function handleDelete() {
+    if (!id || !mission || user?.role !== "admin") {
+      return;
+    }
+
+    setError("");
+    setDeleting(true);
+
+    try {
+      await deleteMission(id);
+      navigate("/missions");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to delete mission",
+      );
+
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   async function handleComplete() {
-    if (!id) return;
+    if (!id || !mission) return;
 
     if (batteryEnd === "") {
-      setError("Battery end is required to complete the mission.");
+      setError(
+        "Battery end is required to complete the mission.",
+      );
       return;
     }
 
@@ -93,12 +127,16 @@ function MissionDetails() {
       batteryEndValue < 0 ||
       batteryEndValue > 100
     ) {
-      setError("Battery end must be a whole number between 0 and 100.");
+      setError(
+        "Battery end must be a whole number between 0 and 100.",
+      );
       return;
     }
 
-    if (batteryEndValue >= mission!.batteryStart) {
-      setError("Battery end must be lower than battery start.");
+    if (batteryEndValue >= mission.batteryStart) {
+      setError(
+        "Battery end must be lower than battery start.",
+      );
       return;
     }
 
@@ -109,7 +147,7 @@ function MissionDetails() {
       const updated = await updateMissionStatus(
         id,
         "completed",
-        mission?.notes ?? null,
+        mission.notes ?? null,
         batteryEndValue,
       );
 
@@ -203,6 +241,11 @@ function MissionDetails() {
       (mission.status === "planned" ||
         mission.status === "in_progress"));
 
+  const canDelete =
+    user?.role === "admin" &&
+    mission.status !== "completed" &&
+    mission.status !== "aborted";
+
   const batteryUsed =
     mission.batteryEnd !== null
       ? mission.batteryStart - mission.batteryEnd
@@ -238,7 +281,7 @@ function MissionDetails() {
             to="/missions"
             className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
           >
-            ? Back to Missions
+            ← Back to Missions
           </Link>
 
           <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
@@ -250,14 +293,27 @@ function MissionDetails() {
           </p>
         </div>
 
-        {canEdit && (
-          <Link
-            to={`/missions/${mission.id}/edit`}
-            className="rounded-lg bg-gray-900 px-4 py-2 font-medium text-white hover:bg-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-          >
-            Edit Mission
-          </Link>
-        )}
+        <div className="flex gap-3">
+          {canEdit && (
+            <Link
+              to={`/missions/${mission.id}/edit`}
+              className="rounded-lg bg-gray-900 px-4 py-2 font-medium text-white hover:bg-gray-700 dark:bg-gray-950"
+            >
+              Edit Mission
+            </Link>
+          )}
+
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={deleting}
+              className="rounded-lg border border-red-300 px-4 py-2 font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-950/30"
+            >
+              Delete Mission
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -280,6 +336,7 @@ function MissionDetails() {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Location
               </p>
+
               <p className="font-medium text-gray-900 dark:text-white">
                 {mission.location}
               </p>
@@ -289,8 +346,11 @@ function MissionDetails() {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Scheduled At
               </p>
+
               <p className="font-medium text-gray-900 dark:text-white">
-                {new Date(mission.scheduledAt).toLocaleString()}
+                {new Date(
+                  mission.scheduledAt,
+                ).toLocaleString()}
               </p>
             </div>
 
@@ -298,6 +358,7 @@ function MissionDetails() {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Duration
               </p>
+
               <p className="font-medium text-gray-900 dark:text-white">
                 {mission.durationMinutes} minutes
               </p>
@@ -307,6 +368,7 @@ function MissionDetails() {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Pilot ID
               </p>
+
               <p className="font-medium text-gray-900 dark:text-white">
                 {mission.pilotId}
               </p>
@@ -334,6 +396,7 @@ function MissionDetails() {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Weather
               </p>
+
               <p className="font-medium capitalize text-gray-900 dark:text-white">
                 {mission.weather}
               </p>
@@ -343,6 +406,7 @@ function MissionDetails() {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Battery Start
               </p>
+
               <p className="font-medium text-gray-900 dark:text-white">
                 {mission.batteryStart}%
               </p>
@@ -352,6 +416,7 @@ function MissionDetails() {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Battery End
               </p>
+
               <p className="font-medium text-gray-900 dark:text-white">
                 {mission.batteryEnd !== null
                   ? `${mission.batteryEnd}%`
@@ -363,6 +428,7 @@ function MissionDetails() {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Battery Used
               </p>
+
               <p className="font-medium text-gray-900 dark:text-white">
                 {batteryUsed !== null
                   ? `${batteryUsed}%`
@@ -398,7 +464,9 @@ function MissionDetails() {
                 </p>
 
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {new Date(event.date).toLocaleString()}
+                  {new Date(
+                    event.date,
+                  ).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -406,7 +474,8 @@ function MissionDetails() {
         </div>
 
         <p className="mt-5 text-xs text-gray-500 dark:text-gray-400">
-          Timeline events use the mission timestamps provided by the API.
+          Timeline events use the mission timestamps provided by
+          the API.
         </p>
       </div>
 
@@ -422,7 +491,7 @@ function MissionDetails() {
               {mission.status === "planned" && (
                 <button
                   type="button"
-                  onClick={handleStart}
+                  onClick={() => void handleStart()}
                   disabled={actionLoading}
                   className="rounded-lg bg-gray-900 px-5 py-2 font-medium text-white hover:bg-gray-700 disabled:opacity-50 dark:bg-gray-950"
                 >
@@ -457,7 +526,7 @@ function MissionDetails() {
 
                   <button
                     type="button"
-                    onClick={handleComplete}
+                    onClick={() => void handleComplete()}
                     disabled={actionLoading}
                     className="rounded-lg bg-gray-900 px-5 py-2 font-medium text-white hover:bg-gray-700 disabled:opacity-50 dark:bg-gray-950"
                   >
@@ -490,7 +559,7 @@ function MissionDetails() {
 
                 <button
                   type="button"
-                  onClick={handleAbort}
+                  onClick={() => void handleAbort()}
                   disabled={actionLoading}
                   className="rounded-lg border border-red-300 px-5 py-2 font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-950/30"
                 >
@@ -512,6 +581,58 @@ function MissionDetails() {
           {mission.notes || "No notes available."}
         </p>
       </div>
+
+      {showDeleteConfirm && canDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-mission-title"
+        >
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+            <h2
+              id="delete-mission-title"
+              className="mb-3 text-xl font-semibold text-gray-900 dark:text-white"
+            >
+              Delete Mission
+            </h2>
+
+            <p className="mb-2 text-gray-700 dark:text-gray-300">
+              Are you sure you want to delete this mission?
+            </p>
+
+            <p className="mb-6 rounded-lg bg-gray-50 p-3 font-medium text-gray-900 dark:bg-gray-900 dark:text-white">
+              "{mission.title}"
+            </p>
+
+            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+              This action cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-900 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className="rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting
+                  ? "Deleting..."
+                  : "Yes, Delete Mission"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

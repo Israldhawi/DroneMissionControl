@@ -61,10 +61,12 @@ function App() {
               element={<MissionEdit />}
             />
 
+            <Route element={<ProtectedRoute adminOnly />}>
             <Route
               path="/pilots"
               element={<Pilots />}
             />
+          </Route>
 
             <Route
               path="/forbidden"
